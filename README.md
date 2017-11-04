@@ -50,11 +50,11 @@ SSD=(1.818t+18.18)(0.88+0.002f)+(t-32)/(45-t)-3.2v+18.2                 
 
 #### 2.2.1规则清除
 
-- 原始数据中，存在单用户某小时内大量购买的现象，如userID为9594359用户在2016年1月30日在shopID为878的商家累计购买了209次。针对此类现象，对于单个用户单小时内的购买数量x，采用以下公式处理消除异常消费：                                 #为什么这里能够算是数据清洗
+- 原始数据中，存在单用户某小时内大量购买的现象，如userID为9594359用户在2016年1月30日在shopID为878的商家累计购买了209次。针对此类现象，对于单个用户单小时内的购买数量x，采用以下公式处理消除异常消费：                                
 
 <div  align="center"> <img src="http://static.zybuluo.com/Jessy923/cp2sq0mlab4sulvf0leyshqa/image.png"/></div>
 
-<div  align="center"> <img src="http://static.zybuluo.com/Jessy923/mb6ggftge0e5k9yfd3dmvewi/image_1bg3jvnk3d9gbik13fl196j1jb19.png" width="400" height="400"/></div>
+<div  align="center"> <img src="http://static.zybuluo.com/Jessy923/mb6ggftge0e5k9yfd3dmvewi/image_1bg3jvnk3d9gbik13fl196j1jb19.png" width="400" height="400"/></div>                        #为什么这里能够算是数据清洗，并且对于树模型，这样清洗是否有效？
 
 - 商家初始入驻口碑平台存在一定的启动时间，同时销售过程中会在销量中断的现象，如下图shopID为1072的商家所示。针对此类现象，开业前7天数据不用于训练集，销量间断前后3天数据不用于训练集。                                                  #这样数据分布能对齐吗？
 
@@ -95,7 +95,7 @@ SSD=(1.818t+18.18)(0.88+0.002f)+(t-32)/(45-t)-3.2v+18.2                 
 - 采用滑窗对于2000个商家日销量的时间序列生成481143条有效训练样本，清除间断前后及异常值后保留468535条样本。
 + 采用2次训练的方法，第一次采用最大深度为3欠拟合模型进一步清洗脏数据。采用了xgboost与sklearn的GBDT模型训练，具体参数如下：
 XGBoost-Round_1: 日销量仅作log处理，预训练后样本保留量为90%。
-XGBoost-Round_2: 日销量仅作log处理后，采用过去三周的中位数作无量纲，预训练后样本保留量为75%。
+XGBoost-Round_2: 日销量仅作log处理后，采用过去三周的中位数作无量纲，预训练后样本保留量为75%。           #xgboost是否有必要做无量纲化？他的这种处理机制还不是很理解
 
 |XGBoost	|objective	|max_depth |	learning_rate	|n_estimators|	reg_alpha|	reg_lambda|
 |:---:	|:---:	|:---: |:---:	|:---:|:---:|:---:|
@@ -117,8 +117,8 @@ GBDT: 第一次训练样本保留量为90%。
 - 方法：过去21天的按工作日平均，得到按工作日平均的均值销量。通过过去三周按周统计的销量中位数及平均值，做线性拟合得到销量增量。将历史均值销量叠加销量增量即得到未来2周预测销量。
 - 由于方法本质上寻找历史上相似的(过去三周相关度较高)销量曲线作为未来预测，本质上为均值模型与KNN方法的结合。
 - 置信度即为融合系数，仅当三周相关系数或后两周相关系数的最小值大于0.7时有效。均值模型的融合比例最大为0.75。融合系数计算方法为：
-<div  align="center"> <img src="http://static.zybuluo.com/Jessy923/gxdn8nohm2qsvayrgri4hbh3/eq1png.png" width="300" height="60"/></div>
-
+<div  align="center"> <img src="http://static.zybuluo.com/Jessy923/gxdn8nohm2qsvayrgri4hbh3/eq1png.png" width="300" height="60"/></div>
+#这个计算方法原理或怎么得到的？
 
 ### 3.3 双11销量修正模型
 - 模型概述：需要预测的时间段（11月1日到11月14日范围内）包含双11节日。从诸多商家的销量图上能明显看到在双11当天存在较大波动，可能的原因为网商促销对实体店的冲击，双11作为光棍节对于餐饮业的促进。然而仅有约1/3的商家存在2015年双11的销量记录，需要通过这部分商家去年双11信息，预测其余商家双11销量表现。
